@@ -1,24 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
-import Link from '@mui/material/Link';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import TextField from '@mui/material/TextField';
+
+import {useLogin, useCaptcha, useLoginByUid, useApplyCaptcha} from 'src/api/query';
+
+import Button from '@mui/material/Button';
+
+import { MuiOtpInput } from 'mui-one-time-password-input'
+
+import { getCookie, setCookie } from 'src/components/cookie/Cookie';
 import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { alpha, useTheme } from '@mui/material/styles';
-import InputAdornment from '@mui/material/InputAdornment';
 
 import { useRouter } from 'src/routes/hooks';
+import Alert from '@mui/material/Alert';
 
 import { bgGradient } from 'src/theme/css';
 
 import Logo from 'src/components/logo';
-import Iconify from 'src/components/iconify';
+
+import Skeleton from '@mui/material/Skeleton';
+import { useCheckCookie } from 'src/api/useCheckCookie';
 
 // ----------------------------------------------------------------------
 
@@ -26,49 +33,137 @@ export default function LoginView() {
   const theme = useTheme();
 
   const router = useRouter();
+  const [phone, setPhone] = useState('');
+  const [captcha, setCaptcha] = useState('');
+  const [otp, setOtp] = useState('');
+  const [alert, setAlert] = useState({ msg: '', type: '' });
+  const [step, setStep] = useState(1);
 
-  const [showPassword, setShowPassword] = useState(false);
+  const { data: capctha, isLoading: isLoadingCapctha, refetch: refetchCaptcha } = useCaptcha();
+  const applyCaptcha = useApplyCaptcha(phone, captcha, capctha);
+  const Login = useLogin(phone, otp);
 
-  const handleClick = () => {
-    router.push('/dashboard');
+
+  const handleRefreshCaptcha = async () => {
+    await refetchCaptcha();
   };
 
+  const handleCaptcha = () => {
+    if (step===1) {
+      
+      const mobileNumberPattern = /^09\d{9}$/;
+      if (!mobileNumberPattern.test(phone)) {
+        setAlert({ msg: 'شماره همراه صحیح نیست', type: 'warning' });
+      }
+      if (captcha.length !== 4) {
+        setAlert({ msg: 'کپچا صحیح نیست', type: 'warning' });
+      } else {
+        setAlert({ msg: '', type: 'info' });
+        applyCaptcha
+        .mutateAsync()
+        .then((response) => {
+          setStep(2);
+        })
+        .catch((erorr) => {
+          if (erorr.response.data.message) {
+            const firstErorr = Object.keys(erorr.response.data.message)[0];
+            setAlert({ msg: erorr.response.data.message[firstErorr], type: 'error' });
+          } else {
+            setAlert({ msg: erorr, type: 'error' });
+          }
+        });
+      }
+    }else{
+      const lenddOtp = 4
+      if (otp.length!==lenddOtp) {
+        setAlert({ msg: 'کد تایید صحیح نیست', type: 'warning' });
+      }else{
+        Login.mutateAsync()
+        .then(response=>{
+          setCookie('uid',response._id,10)
+          router.push('/');
+        })
+        .catch(erorr=>{
+          if (erorr.response.data.message) {
+            const firstErorr = Object.keys(erorr.response.data.message)[0];
+            setAlert({ msg: erorr.response.data.message[firstErorr], type: 'error' });
+          } else {
+            setAlert({ msg: erorr, type: 'error' });
+          }
+        })
+      }
+    }
+  };
+
+
+
+  useEffect(() => {
+    useCheckCookie();
+  }, []);
+  
   const renderForm = (
     <>
-      <Stack spacing={3}>
-        <TextField name="email" label="Email address" />
-
+      <Stack spacing={3} sx={{ mb: 2 }}>
         <TextField
-          name="password"
-          label="Password"
-          type={showPassword ? 'text' : 'password'}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                  <Iconify icon={showPassword ? 'eva:eye-fill' : 'eva:eye-off-fill'} />
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          name="phone"
+          label="شمار همراه"
+          disabled={step !== 1}
         />
-      </Stack>
 
-      <Stack direction="row" alignItems="center" justifyContent="flex-end" sx={{ my: 3 }}>
-        <Link variant="subtitle2" underline="hover">
-          Forgot password?
-        </Link>
-      </Stack>
+        {step === 1 ? (
+          <>
+            <TextField
+              value={captcha}
+              onChange={(e) => setCaptcha(e.target.value)}
+              name="captcha"
+              label="کپچا"
+            />
+            {isLoadingCapctha ? (
+              <Skeleton variant="rounded" width="100%" height={60} />
+            ) : (
+              <Button
+                onClick={handleRefreshCaptcha}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+              >
+                <img src={`data:image/png;base64,${capctha.image}`} alt="کد کپچا" />
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+                    <Divider sx={{ my: 3 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              کد تایید
+            </Typography>
+          </Divider>
+          <dir dir='ltr'>
+          <MuiOtpInput value={otp} onChange={setOtp} />
 
+          </dir>
+          </>
+        )}
+
+        {alert.msg ? (
+          <Alert
+            sx={{ cursor: 'pointer' }}
+            onClick={() => setAlert({ msg: '', type: 'info' })}
+            severity={alert.type}
+          >
+            {alert.msg}
+          </Alert>
+        ) : null}
+      </Stack>
       <LoadingButton
         fullWidth
         size="large"
         type="submit"
         variant="contained"
         color="inherit"
-        onClick={handleClick}
+        onClick={handleCaptcha}
       >
-        Login
+        تایید
       </LoadingButton>
     </>
   );
@@ -99,53 +194,13 @@ export default function LoginView() {
             maxWidth: 420,
           }}
         >
-          <Typography variant="h4">Sign in to Minimal</Typography>
-
-          <Typography variant="body2" sx={{ mt: 2, mb: 5 }}>
-            Don’t have an account?
-            <Link variant="subtitle2" sx={{ ml: 0.5 }}>
-              Get started
-            </Link>
-          </Typography>
-
-          <Stack direction="row" spacing={2}>
-            <Button
-              fullWidth
-              size="large"
-              color="inherit"
-              variant="outlined"
-              sx={{ borderColor: alpha(theme.palette.grey[500], 0.16) }}
-            >
-              <Iconify icon="eva:google-fill" color="#DF3E30" />
-            </Button>
-
-            <Button
-              fullWidth
-              size="large"
-              color="inherit"
-              variant="outlined"
-              sx={{ borderColor: alpha(theme.palette.grey[500], 0.16) }}
-            >
-              <Iconify icon="eva:facebook-fill" color="#1877F2" />
-            </Button>
-
-            <Button
-              fullWidth
-              size="large"
-              color="inherit"
-              variant="outlined"
-              sx={{ borderColor: alpha(theme.palette.grey[500], 0.16) }}
-            >
-              <Iconify icon="eva:twitter-fill" color="#1C9CEA" />
-            </Button>
-          </Stack>
+          <Typography variant="h4">ورود / ثبت نام</Typography>
 
           <Divider sx={{ my: 3 }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              OR
+              میز کار
             </Typography>
           </Divider>
-
           {renderForm}
         </Card>
       </Stack>
