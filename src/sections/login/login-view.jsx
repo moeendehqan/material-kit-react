@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState,  useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -25,7 +25,6 @@ import { bgGradient } from 'src/theme/css';
 import Logo from 'src/components/logo';
 
 import Skeleton from '@mui/material/Skeleton';
-import { useCheckCookie } from 'src/api/useCheckCookie';
 
 // ----------------------------------------------------------------------
 
@@ -38,6 +37,7 @@ export default function LoginView() {
   const [otp, setOtp] = useState('');
   const [alert, setAlert] = useState({ msg: '', type: '' });
   const [step, setStep] = useState(1);
+  const [CheckCookieState, setCheckCookieState] = useState(false);
 
   const { data: capctha, isLoading: isLoadingCapctha, refetch: refetchCaptcha } = useCaptcha();
   const applyCaptcha = useApplyCaptcha(phone, captcha, capctha);
@@ -97,9 +97,25 @@ export default function LoginView() {
 
 
 
-  useEffect(() => {
-    useCheckCookie();
-  }, []);
+  const loginUid = useLoginByUid(getCookie('uid'));
+  function CheckCookie() {
+    if (!CheckCookieState) {
+      setCheckCookieState(true)
+      loginUid.mutateAsync()
+        .then(response => {
+          setCookie('uid',response._id,10)
+          router.push('/');
+        })
+        .catch(error => {
+          setCookie('uid','',0)
+
+        });
+
+    }
+  }
+  
+
+  useEffect(CheckCookie, [loginUid,CheckCookieState,router]);
   
   const renderForm = (
     <>

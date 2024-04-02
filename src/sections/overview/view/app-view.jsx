@@ -6,6 +6,14 @@ import Typography from '@mui/material/Typography';
 
 import Iconify from 'src/components/iconify';
 
+import { useLoginByUid } from 'src/api/query';
+
+import { useState, useEffect } from 'react';
+
+import { useRouter } from 'src/routes/hooks';
+
+import { getCookie, setCookie } from 'src/components/cookie/Cookie';
+
 import AppTasks from '../app-tasks';
 import AppNewsUpdate from '../app-news-update';
 import AppOrderTimeline from '../app-order-timeline';
@@ -16,13 +24,41 @@ import AppTrafficBySite from '../app-traffic-by-site';
 import AppCurrentSubject from '../app-current-subject';
 import AppConversionRates from '../app-conversion-rates';
 
+
+
 // ----------------------------------------------------------------------
 
 export default function AppView() {
+  const [CheckCookieState, setCheckCookieState] = useState(false);
+  const router = useRouter();
+
+
+  const loginUid = useLoginByUid(getCookie('uid'));
+  function CheckCookie() {
+    if (!CheckCookieState) {
+      setCheckCookieState(true)
+      loginUid.mutateAsync()
+        .then(response => {
+          setCookie('uid',response._id,10)
+        })
+        .catch(error => {
+          setCookie('uid','',0)
+          router.push('/login');
+
+        });
+
+    }
+  }
+
+  useEffect(CheckCookie, [loginUid,CheckCookieState,router]);
+
+
+  console.log(loginUid.data)
+
   return (
     <Container maxWidth="xl">
       <Typography variant="h4" sx={{ mb: 5 }}>
-        Hi, Welcome back 👋
+        سلام, {loginUid.data.name} خوشامدی 👋
       </Typography>
 
       <Grid container spacing={3}>
