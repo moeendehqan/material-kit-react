@@ -24,42 +24,39 @@ import AppTrafficBySite from '../app-traffic-by-site';
 import AppCurrentSubject from '../app-current-subject';
 import AppConversionRates from '../app-conversion-rates';
 
-
-
 // ----------------------------------------------------------------------
 
 export default function AppView() {
   const [CheckCookieState, setCheckCookieState] = useState(false);
   const router = useRouter();
 
+  const uid = getCookie('uid')
 
-  const loginUid = useLoginByUid(getCookie('uid'));
+  const loginUid = useLoginByUid(uid);
   function CheckCookie() {
     if (!CheckCookieState) {
-      setCheckCookieState(true)
-      loginUid.mutateAsync()
-        .then(response => {
-          setCookie('uid',response._id,10)
+      setCheckCookieState(true);
+      loginUid
+        .mutateAsync()
+        .then((response) => {
+          setCookie('uid', response.id, 10);
         })
-        .catch(error => {
-          setCookie('uid','',0)
+        .catch((error) => {
+          setCookie('uid', '', 0);
           router.push('/login');
-
         });
-
     }
   }
 
-  useEffect(CheckCookie, [loginUid,CheckCookieState,router]);
-
-
-  console.log(loginUid.data)
+  useEffect(CheckCookie, [loginUid, CheckCookieState, router,uid]);
 
   return (
     <Container maxWidth="xl">
-      <Typography variant="h4" sx={{ mb: 5 }}>
-        سلام, {loginUid.data.name} خوشامدی 👋
-      </Typography>
+      {loginUid.data ? (
+        <Typography variant="h4" sx={{ mb: 5 }}>
+          سلام, {loginUid.data.name} خوشامدی 👋
+        </Typography>
+      ) : null}
 
       <Grid container spacing={3}>
         <Grid xs={12} sm={6} md={3}>

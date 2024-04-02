@@ -96,26 +96,26 @@ export default function LoginView() {
   };
 
 
+  const uid = getCookie('uid')
 
-  const loginUid = useLoginByUid(getCookie('uid'));
+  const loginUid = useLoginByUid(uid);
   function CheckCookie() {
-    if (!CheckCookieState) {
+    if (!CheckCookieState && uid.length>0) {
       setCheckCookieState(true)
       loginUid.mutateAsync()
         .then(response => {
-          setCookie('uid',response._id,10)
+          setCookie('uid',response.id,10)
           router.push('/');
         })
         .catch(error => {
           setCookie('uid','',0)
-
         });
 
     }
   }
   
 
-  useEffect(CheckCookie, [loginUid,CheckCookieState,router]);
+  useEffect(CheckCookie, [loginUid,CheckCookieState,router,uid]);
   
   const renderForm = (
     <>

@@ -20,8 +20,9 @@ export function fTimestamp(date) {
 
 export function fToNow(date) {
   return date
-    ? formatDistanceToNow(new Date(date), {
+    ? formatDistanceToNow(date, {
         addSuffix: true,
       })
     : '';
 }
+

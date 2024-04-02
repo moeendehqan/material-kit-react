@@ -1,8 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { set, sub } from 'date-fns';
-import { faker } from '@faker-js/faker';
-
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
 import Badge from '@mui/material/Badge';
@@ -22,59 +19,97 @@ import { fToNow } from 'src/utils/format-time';
 
 import Iconify from 'src/components/iconify';
 import Scrollbar from 'src/components/scrollbar';
+import { getCookie } from 'src/components/cookie/Cookie';
+import { useGetLastNotifUser } from 'src/api/query';
+import { MarkAllNotifRead } from 'src/api/api';
+
 
 // ----------------------------------------------------------------------
 
-const NOTIFICATIONS = [
-  {
-    id: faker.string.uuid(),
-    title: 'Your order is placed',
-    description: 'waiting for shipping',
-    avatar: null,
-    type: 'order_placed',
-    createdAt: set(new Date(), { hours: 10, minutes: 30 }),
-    isUnRead: true,
-  },
-  {
-    id: faker.string.uuid(),
-    title: faker.person.fullName(),
-    description: 'answered to your comment on the Minimal',
-    avatar: '/assets/images/avatars/avatar_2.jpg',
-    type: 'friend_interactive',
-    createdAt: sub(new Date(), { hours: 3, minutes: 30 }),
-    isUnRead: true,
-  },
-  {
-    id: faker.string.uuid(),
-    title: 'You have new message',
-    description: '5 unread messages',
-    avatar: null,
-    type: 'chat_message',
-    createdAt: sub(new Date(), { days: 1, hours: 3, minutes: 30 }),
-    isUnRead: false,
-  },
-  {
-    id: faker.string.uuid(),
-    title: 'You have new mail',
-    description: 'sent from Guido Padberg',
-    avatar: null,
-    type: 'mail',
-    createdAt: sub(new Date(), { days: 2, hours: 3, minutes: 30 }),
-    isUnRead: false,
-  },
-  {
-    id: faker.string.uuid(),
-    title: 'Delivery processing',
-    description: 'Your order is being shipped',
-    avatar: null,
-    type: 'order_shipped',
-    createdAt: sub(new Date(), { days: 3, hours: 3, minutes: 30 }),
-    isUnRead: false,
-  },
-];
+// const NOTIFICATIONS = [
+//   {
+//     id: faker.string.uuid(),
+//     title: 'Your order is placed',
+//     description: 'waiting for shipping',
+//     avatar: null,
+//     type: 'order_placed',
+//     createdAt: set(new Date(), { hours: 10, minutes: 30 }),
+//     isUnRead: true,
+//   },
+//   {
+//     id: faker.string.uuid(),
+//     title: faker.person.fullName(),
+//     description: 'answered to your comment on the Minimal',
+//     avatar: '/assets/images/avatars/avatar_2.jpg',
+//     type: 'friend_interactive',
+//     createdAt: sub(new Date(), { hours: 3, minutes: 30 }),
+//     isUnRead: true,
+//   },
+//   {
+//     id: faker.string.uuid(),
+//     title: 'You have new message',
+//     description: '5 unread messages',
+//     avatar: null,
+//     type: 'chat_message',
+//     createdAt: sub(new Date(), { days: 1, hours: 3, minutes: 30 }),
+//     isUnRead: false,
+//   },
+//   {
+//     id: faker.string.uuid(),
+//     title: 'You have new mail',
+//     description: 'sent from Guido Padberg',
+//     avatar: null,
+//     type: 'mail',
+//     createdAt: sub(new Date(), { days: 2, hours: 3, minutes: 30 }),
+//     isUnRead: false,
+//   },
+//   {
+//     id: faker.string.uuid(),
+//     title: 'Delivery processing',
+//     description: 'Your order is being shipped',
+//     avatar: null,
+//     type: 'order_shipped',
+//     createdAt: sub(new Date(), { days: 3, hours: 3, minutes: 30 }),
+//     isUnRead: false,
+//   },
+// ];
 
 export default function NotificationsPopover() {
-  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+  // const [notifications, setNotifications] = useState(NOTIFICATIONS);
+  const [hasNotifications, sethasNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  const uid = getCookie('uid')
+
+
+  const getNotifUser = useGetLastNotifUser(uid)
+
+  const handleGetNotifUser = () => {
+    if (!hasNotifications) {
+      sethasNotifications(true);
+      getNotifUser.mutateAsync()
+        .then(response => {
+          if (response && Array.isArray(response.Notifications)) {
+            const updatedNotifications = response.Notifications.map(notification => ({
+              ...notification,
+              createAt: new Date(notification.createAt)
+            }));
+            setNotifications(updatedNotifications);
+          } else {
+            setNotifications([]);
+          }
+        })
+        .catch(error => {
+          setNotifications([]);
+        });
+    }
+  };
+  
+
+
+
+  useEffect(handleGetNotifUser,[getNotifUser,notifications,hasNotifications])
+
 
   const totalUnRead = notifications.filter((item) => item.isUnRead === true).length;
 
@@ -89,6 +124,8 @@ export default function NotificationsPopover() {
   };
 
   const handleMarkAllAsRead = () => {
+    console.log(uid)
+    MarkAllNotifRead(uid)
     setNotifications(
       notifications.map((notification) => ({
         ...notification,
@@ -121,9 +158,9 @@ export default function NotificationsPopover() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', py: 2, px: 2.5 }}>
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="subtitle1">Notifications</Typography>
+            <Typography variant="subtitle1">پیام ها</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              You have {totalUnRead} unread messages
+              شما {totalUnRead} پیام خوانده نشده دارید
             </Typography>
           </Box>
 
@@ -147,23 +184,12 @@ export default function NotificationsPopover() {
               </ListSubheader>
             }
           >
-            {notifications.slice(0, 2).map((notification) => (
-              <NotificationItem key={notification.id} notification={notification} />
+            {notifications.map((notification) => (
+              <NotificationItem key={notification._id} notification={notification} />
             ))}
           </List>
 
-          <List
-            disablePadding
-            subheader={
-              <ListSubheader disableSticky sx={{ py: 1, px: 2.5, typography: 'overline' }}>
-                Before that
-              </ListSubheader>
-            }
-          >
-            {notifications.slice(2, 5).map((notification) => (
-              <NotificationItem key={notification.id} notification={notification} />
-            ))}
-          </List>
+
         </Scrollbar>
 
         <Divider sx={{ borderStyle: 'dashed' }} />
@@ -182,7 +208,7 @@ export default function NotificationsPopover() {
 
 NotificationItem.propTypes = {
   notification: PropTypes.shape({
-    createdAt: PropTypes.instanceOf(Date),
+    createAt: PropTypes.instanceOf(Date),
     id: PropTypes.string,
     isUnRead: PropTypes.bool,
     title: PropTypes.string,
@@ -222,7 +248,7 @@ function NotificationItem({ notification }) {
             }}
           >
             <Iconify icon="eva:clock-outline" sx={{ mr: 0.5, width: 16, height: 16 }} />
-            {fToNow(notification.createdAt)}
+            {fToNow(notification.createAt)}
           </Typography>
         }
       />

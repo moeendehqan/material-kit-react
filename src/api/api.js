@@ -28,3 +28,12 @@ export const LoginByUid = async (uid) => {
     return data;
 }
 
+export const GetLastNotifUser = async (uid) => {
+    const { data } = await client.post('/notifivation/getlastuser', { uid });
+    return data;
+}
+
+export const MarkAllNotifRead = async (uid) => {
+    const { data } = await client.post('/notifivation/markallread', { uid });
+    return data;
+}

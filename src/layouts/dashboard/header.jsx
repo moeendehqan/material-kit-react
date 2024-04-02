@@ -1,4 +1,5 @@
 import PropTypes from 'prop-types';
+import { getCookie } from 'src/components/cookie/Cookie';
 
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -22,6 +23,11 @@ import NotificationsPopover from './common/notifications-popover';
 // ----------------------------------------------------------------------
 
 export default function Header({ onOpenNav }) {
+
+  const uid = getCookie('uid')
+  console.log(uid)
+
+
   const theme = useTheme();
 
   const lgUp = useResponsive('up', 'lg');

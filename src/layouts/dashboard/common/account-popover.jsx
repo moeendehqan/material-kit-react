@@ -10,6 +10,8 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 
 import { account } from 'src/_mock/account';
+import { useRouter } from 'src/routes/hooks';
+import { setCookie } from 'src/components/cookie/Cookie';
 
 // ----------------------------------------------------------------------
 
@@ -31,7 +33,10 @@ const MENU_OPTIONS = [
 // ----------------------------------------------------------------------
 
 export default function AccountPopover() {
+
+
   const [open, setOpen] = useState(null);
+  const router = useRouter();
 
   const handleOpen = (event) => {
     setOpen(event.currentTarget);
@@ -39,6 +44,13 @@ export default function AccountPopover() {
 
   const handleClose = () => {
     setOpen(null);
+  };
+
+
+  const handleExit = () => {
+    setCookie('uid','',0)
+    router.push('/login');
+
   };
 
   return (
@@ -105,10 +117,10 @@ export default function AccountPopover() {
         <MenuItem
           disableRipple
           disableTouchRipple
-          onClick={handleClose}
+          onClick={handleExit}
           sx={{ typography: 'body2', color: 'error.main', py: 1.5 }}
         >
-          Logout
+          خروج
         </MenuItem>
       </Popover>
     </>

@@ -34,3 +34,12 @@ export const useLoginByUid = (uid) =>{
         },
     })
 }
+
+export const useGetLastNotifUser = (uid) =>{
+    const queryClient = useQueryClient();
+    return useMutation(()=>api.GetLastNotifUser(uid),{
+        onSuccess: async () => {
+            await queryClient.refetchQueries('allnotifuser');
+        },
+    })
+}
